@@ -1,50 +1,101 @@
 from heal import heal, reduce_cooldowns
+import time
+import os
 
-# ====================== BATTLE FUNCTION ============================
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 def battle(player, wizard):
+    turn = 1
     try:
         while player.health > 0 and wizard.health > 0:
-            print("\n--- Your Turn ---")
-            print("1. Attack")
-            print("2. Use Special Ability")
-            print("3. Heal")
-            print("4. View Stats")
-            print("5. Quit Game")
+            clear_screen()
+            print(f"\n=== Turn {turn} ===")
+            print("=" * 40)
 
-            choice = input("\nChoose an action: ")
+            # ------------------ PLAYER TURN ------------------
+            player_action_completed = False
 
-            if choice == '1':
-                player.attack(wizard)
-            elif choice == '2':
-                try:
-                    player.special_ability(wizard)
-                except AttributeError:
-                    print("Special ability not implemented.")
-            elif choice == '3':
-                heal(player) 
-            elif choice == '4':
-                player.display_stats()
-                continue  # Skip wizard's turn
-            elif choice == '5':
-                print("Quitting game...")
-                break
-            else:
-                print("Invalid choice. Try again.")
-                continue
+            while not player_action_completed:
+                print("\n--- Your Turn ---")
+                print("1. Attack")
+                print("2. Use Special Ability")
+                print("3. Heal")
+                print("4. View Stats")
+                print("5. Quit Game")
 
+                choice = input("\nChoose an action: ").strip()
+
+                if choice == '1':
+                    player.attack(wizard)
+                    player_action_completed = True
+
+                elif choice == '2':
+                    try:
+                        player.special_ability(wizard)
+                        player_action_completed = True
+                    except AttributeError:
+                        print("Special ability not implemented.")
+                        continue
+
+                elif choice == '3':
+                    success = heal(player)
+                    if success:
+                        player_action_completed = True
+                    else:
+                        input("\nHealing failed. Press Enter to choose another action...")
+                        continue
+
+                elif choice == '4':
+                    player.display_stats()
+                    wizard.display_stats()
+                    input("\nPress Enter to continue...")
+                    continue
+
+                elif choice == '5':
+                    print("Quitting game...")
+                    return
+
+                else:
+                    print("Invalid choice. Try again.")
+                    continue
+
+            print("\n✅ Player turn completed. Proceeding to wizard's turn...")
+
+            # ------------------ CHECK WIZARD DEFEAT ------------------
             if wizard.health <= 0:
-                print(f"The wizard {wizard.name} has been defeated by {player.name}!")
+                print(f"\n🏆 {player.name} has vanquished {wizard.name}! The realm breathes easier... for now.")
                 break
 
+            input("\nPress Enter to continue...")
+
+            # ------------------ WIZARD TURN ------------------
+            print("\n" + "-" * 40)
+            time.sleep(1)
             print("\n--- Wizard's Turn ---")
             wizard.regenerate()
-            wizard.attack(player)
+            time.sleep(1)
 
-            # Reduce cooldowns after both turns
+            if getattr(player, 'evade_next', False):
+                print(f"{player.name} evades the attack thanks to Vanish!")
+                player.evade_next = False
+            elif getattr(player, 'shield_active', False):
+                print(f"{player.name}'s Divine Shield blocks the attack!")
+                player.shield_active = False
+            else:
+                wizard.take_turn(player)
+
+            time.sleep(1)
+            print("\n--- End of Wizard Turn ---")
             reduce_cooldowns(player)
 
+            # ------------------ CHECK PLAYER DEFEAT ------------------
             if player.health <= 0:
-                print(f"{player.name} has been defeated!")
+                print(f"\n💀 {player.name} has fallen. Evil triumphs... this time.")
                 break
+
+            input("\nPress Enter to continue...")
+            turn += 1
+
     except Exception as e:
-        print(f"An error occurred during battle: {e}")
+        print(f"\n⚠️ An error occurred during battle: {e}")
