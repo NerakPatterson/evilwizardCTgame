@@ -2,7 +2,6 @@ from classes import *
 from imp_assassin import ImpAssassin
 from hellhound_berserker import HellhoundBerserker
 from demon_sorcerer import DemonSorcerer
-from seraphin import Seraphin
 from succubus_rogue import SuccubusRogue
 from evil_wizard import EvilWizard
 import time
@@ -68,14 +67,17 @@ def battle(player, wizard):
                 choice = input("\nChoose an action: ").strip()
 
                 if choice == '1':
-                    player.attack(wizard)
-                    turn_history.append(f"{player.name} attacked {wizard.name} for {player.attack_power} damage.")
+                    result = player.attack(wizard)
+                    # extend battle log instead of generic placeholder
+                    turn_history.extend(player.battle_log)
+                    player.battle_log.clear()
                     player_action_completed = True
 
                 elif choice == '2':
                     try:
-                        player.special_ability(wizard)
-                        turn_history.append(f"{player.name} used their special ability.")
+                        result = player.special_ability(wizard)
+                        turn_history.extend(player.battle_log)
+                        player.battle_log.clear()
                         player_action_completed = True
                     except AttributeError:
                         print("Special ability not implemented.")
@@ -84,7 +86,8 @@ def battle(player, wizard):
                 elif choice == '3':
                     success = player.heal()
                     if success:
-                        turn_history.append(f"{player.name} healed and now has {player.health} HP.")
+                        turn_history.extend(player.battle_log)
+                        player.battle_log.clear()
                         player_action_completed = True
                     else:
                         input("\nHealing failed. Press Enter to choose another action...")
@@ -108,7 +111,7 @@ def battle(player, wizard):
 
             if wizard.health <= 0:
                 print(f"\n🏆 {player.name} has vanquished {wizard.name}! The realm breathes easier... for now.")
-                turn_history.append(f"{player.name} defeated {wizard.name} in Turn {turn}.")
+                turn_history.extend(player.battle_log)
                 break
 
             print("\n--- Wizard's Turn ---")
@@ -116,22 +119,25 @@ def battle(player, wizard):
             time.sleep(1)
 
             if getattr(player, 'evade_next', False):
-                print(f"{player.name} evades the attack thanks to Vanish!")
-                turn_history.append(f"{player.name} evaded the attack.")
+                msg = f"{player.name} evades the attack thanks to Vanish!"
+                print(msg)
+                turn_history.append(msg)
                 player.evade_next = False
             elif getattr(player, 'shield_active', False):
-                print(f"{player.name}'s Divine Shield blocks the attack!")
-                turn_history.append(f"{player.name}'s shield blocked the attack.")
+                msg = f"{player.name}'s Divine Shield blocks the attack!"
+                print(msg)
+                turn_history.append(msg)
                 player.shield_active = False
             else:
                 wizard.attack(player)
-                turn_history.append(f"{wizard.name} attacked {player.name} for {wizard.attack_power} damage.")
+                turn_history.extend(wizard.battle_log)
+                wizard.battle_log.clear()
 
             player.reduce_cooldowns()
 
             if player.health <= 0:
                 print(f"\n {player.name} has fallen. Evil triumphs... this time.")
-                turn_history.append(f"{player.name} was defeated by {wizard.name} in Turn {turn}.")
+                turn_history.extend(wizard.battle_log)
                 break
 
             turn += 1
