@@ -4,7 +4,7 @@ from heal import heal as universal_heal
 
 class HellhoundBerserker(Character):
     def __init__(self, name):
-        super().__init__(name, health=150, attack_power=40)
+        super().__init__(name, health=180, attack_power=40)
         self.healing_cost = 65
         self.evade_next = False
         self.last_move = None
@@ -26,32 +26,32 @@ class HellhoundBerserker(Character):
             "Moonlight Claws": 0,
         }
 
-        # Archer-style interjections
-        self.archer_comments = [
-            "Phrasing!",
-            "Do you even lift, mortal?",
-            "That was weak. Try again.",
+        self.comments = [
+            "Come with me and I’ll show you the truth, face down in the fountain of youth.",
+            "Let’s bury the hatchet… in your head.",
+            "Even Van Gogh would call it a bloody good impression!",
             "Wow, truly terrifying... not.",
-            "Classic attempt. Pathetic!",
+            "Slave to the plot: let 'em rot or bring 'em back forever.",
             "Try harder next time.",
+            "Sometimes… dead is better.",
+            "I’m not a hugger. Don’t touch me."
         ]
 
-        # Move-specific insults
         self.move_insults = {
             "Snarky Sass": [
-                "Oof, that burn hurt more you than me!",
-                "You're really trying… bless your heart.",
-                "Keep talking, it’s the only thing you’re good at!"
+                "I’m not a people person. I’m barely a demon person.",
+                "I’m not angry. I’m just disappointed… in everything.",
+                "I’m not a fan of the ‘fuck you’ attitude, but I’m not above using it."
             ],
             "Moonlight Claws": [
-                "Too slow! Are you on vacation or attacking?",
+                "You’re like a chihuahua with a gun — loud, twitchy, and way too confident.",
                 "Your claws need sharpening… like your skills.",
-                "Try harder, I’m barely tickled."
+                "You’re like a hemorrhoid — irritating, painful, and hard to get rid of."
             ],
             "Blood Frenzy": [
-                "Look at you, all frothing and… still failing.",
-                "I hope that hurt you more than your ego!",
-                "Rage all you want, it won’t save you."
+                "You’re not worth the therapy I’d need after talking to you.",
+                "You’re not intimidating. You’re just tall and annoying.",
+                "You’re not edgy. You’re just loud and sad."
             ],
             "Infernal Howl": [
                 "That roar was cute. Truly adorable.",
@@ -73,9 +73,9 @@ class HellhoundBerserker(Character):
     def heal(self):
         self.heal_amount = 20
         self.heal_cooldown_duration = 2
-        print(f"{self.name} growls: 'Fine, healing myself... don't get used to it.'")
+        print(f"{self.name} growls: 'I’d say ‘bite me,’ but you’d probably cry about it.'")
         success = universal_heal(self)
-        msg = f"{self.name} snarls: 'Better. Whatever.'" if success else f"{self.name} snaps: 'Really? Pathetic.'"
+        msg = f"{self.name} snarls: 'Better. Whatever.'" if success else f"{self.name} snaps: 'Really? Fuck Moxxie!'"
         print(msg)
         self.battle_log.append(msg)
         self._maybe_comment_or_insult()
@@ -86,13 +86,30 @@ class HellhoundBerserker(Character):
             if self.cooldowns[move] > 0:
                 self.cooldowns[move] -= 1
 
+    def choose_move(self, move_list):
+        print("\nChoose your move:")
+        for i, move in enumerate(move_list, 1):
+            key = move["key"]
+            cd = self.cooldowns.get(key, 0)
+            status = f"(Cooldown: {cd})" if cd > 0 else "(Ready)"
+            print(f"{i}. {key} — {move['description']} {status}")
+        print(f"{len(move_list)+1}. Go back")
+
+        while True:
+            choice = input("Enter move number: ").strip()
+            if choice.isdigit():
+                choice = int(choice)
+                if 1 <= choice <= len(move_list):
+                    return move_list[choice - 1]
+                elif choice == len(move_list) + 1:
+                    return None
+            print("Invalid choice. Try again.")
+
     def _maybe_comment_or_insult(self, opponent=None, move_key=None):
-        # Archer interjection
         if random.randint(1, 100) <= 25:
-            comment = random.choice(self.archer_comments)
+            comment = random.choice(self.comments)
             print(f"{self.name} mutters: '{comment}'")
             self.battle_log.append(comment)
-        # Move-specific insult
         if opponent and move_key and move_key in self.move_insults and random.randint(1, 100) <= 50:
             insult = random.choice(self.move_insults[move_key])
             print(f"{self.name} sneers at {opponent.name}: '{insult}'")
@@ -102,22 +119,23 @@ class HellhoundBerserker(Character):
         key = chosen["key"]
         self.current_opponent = opponent
 
-        # Repeat/cooldown checks
+        print(f"\n{self.name} prepares to use {key}: {chosen['description']}")
+        self.battle_log.append(f"{self.name} prepares to use {key}: {chosen['description']}")
+
         if self.last_move == key:
-            msg = f"{self.name} snarls: 'Can't spam {key}, genius!'"
+            msg = f"{self.name} snarls: 'Come on? {key}, Really?'"
             print(msg)
             self.battle_log.append(msg)
             return False
         if self.cooldowns.get(key, 0) > 0:
-            msg = f"{self.name} rolls her eyes: '{key} cooling down. Chill.'"
+            msg = f"{self.name} rolls her eyes: '{key} cooling down Dad. Chill.'"
             print(msg)
             self.battle_log.append(msg)
             return False
 
-        # Accuracy check
         net_hit_chance = max(chosen["accuracy"] - opponent.evasion, 5)
         if random.randint(1, 100) > net_hit_chance:
-            msg = f"{self.name} lunges at {opponent.name} but misses. 'Pathetic!'"
+            msg = f"{self.name} lunges at {opponent.name} but misses. 'I think I drank too much!'"
             print(msg)
             self.battle_log.append(msg)
             self._maybe_comment_or_insult(opponent, key)
@@ -125,13 +143,14 @@ class HellhoundBerserker(Character):
             self.cooldowns[key] = chosen.get("cooldown", 0)
             return True
 
-        # Damage calculation
-        base = random.randint(int(self.attack_power * chosen["multiplier"] * 0.8),
-                              int(self.attack_power * chosen["multiplier"] * 1.2))
+        base = random.randint(
+            int(self.attack_power * chosen["multiplier"] * 0.8),
+            int(self.attack_power * chosen["multiplier"] * 1.2)
+        )
         is_crit = random.randint(1, 100) <= chosen.get("crit", 0)
         if is_crit:
             base *= 2
-            crit_msg = f"{self.name} smirks: 'Critical hit! Bet you didn’t see that coming.'"
+            crit_msg = f"{self.name} smirks: ' You’re like a bad musical — overacted, underwritten, and nobody asked for it.'"
             print(crit_msg)
             self.battle_log.append(crit_msg)
 
@@ -142,23 +161,30 @@ class HellhoundBerserker(Character):
         self.battle_log.append(f"{self.name} used {key} on {opponent.name} for {damage} damage" + (" (CRIT)" if is_crit else ""))
         self.battle_log.append(hit_msg)
 
-        # Optional debuff
+        if "recoil" in chosen:
+            recoil_damage = int(self.attack_power * chosen["recoil"])
+            self.health = max(self.health - recoil_damage, 0)
+            recoil_msg = f"{self.name} winces: 'Worth it... probably.' ({recoil_damage} recoil)"
+            print(recoil_msg)
+            self.battle_log.append(recoil_msg)
+
         if "debuff" in chosen:
             debuff = chosen["debuff"]
             if not hasattr(opponent, "active_debuffs"):
                 opponent.active_debuffs = {}
-            opponent.active_debuffs[debuff["stat"]] = {"amount": debuff["amount"], "duration": debuff["duration"]}
+            opponent.active_debuffs[debuff["stat"]] = {
+                "amount": debuff["amount"],
+                "duration": debuff["duration"]
+            }
             debuff_msg = f"{opponent.name}'s {debuff['stat']} is reduced by {debuff['amount']} for {debuff['duration']} turns!"
             print(debuff_msg)
             self.battle_log.append(debuff_msg)
 
-        # Archer-style interjection and insult
         self._maybe_comment_or_insult(opponent, key)
 
         self.last_move = key
         self.cooldowns[key] = chosen.get("cooldown", 0)
 
-        # End of battle check
         if opponent.health <= 0:
             msg = f"{opponent.name} has been defeated!"
             print(msg)
@@ -172,28 +198,57 @@ class HellhoundBerserker(Character):
 
         return True
 
-    # Normal attacks
     def attack(self, opponent):
         attacks = [
-            {"key": "Snarky Sass", "name": "Snarky Sass",
-             "description": "A verbal lash that wounds pride.",
-             "multiplier": 0.8, "accuracy": 95, "crit": 5, "cooldown": 1,
-             "debuff": {"stat": "accuracy", "amount": 10, "duration": 2}},
-            {"key": "Moonlight Claws", "name": "Moonlight Claws",
-             "description": "A swift slash under moonlight.",
-             "multiplier": 1.0, "accuracy": 90, "crit": 20, "cooldown": 0}
+            {
+                "key": "Snarky Sass",
+                "name": "Snarky Sass",
+                "description": "A verbal lash that wounds pride.",
+                "multiplier": 0.8,
+                "accuracy": 95,
+                "crit": 5,
+                "cooldown": 0,
+                "debuff": {"stat": "accuracy", "amount": 10, "duration": 2}
+            },
+            {
+                "key": "Moonlight Claws",
+                "name": "Moonlight Claws",
+                "description": "A swift slash under moonlight.",
+                "multiplier": 1.0,
+                "accuracy": 90,
+                "crit": 20,
+                "cooldown": 0
+            }
         ]
-        return self._execute_move(random.choice(attacks), opponent)
-
-    # Special abilities
+        chosen = self.choose_move(attacks)
+        if chosen:
+            return self._execute_move(chosen, opponent)
+        return None  # player chose to go back
+    
     def special_ability(self, opponent):
         abilities = [
-            {"key": "Blood Frenzy", "name": "Blood Frenzy",
-             "description": "Double damage attack with recoil. May critically strike.",
-             "multiplier": 2.0, "accuracy": 100, "crit": 25, "cooldown": 3, "recoil": 0.5},
-            {"key": "Infernal Howl", "name": "Infernal Howl",
-             "description": "A roar that lowers enemy defense temporarily.",
-             "multiplier": 1.0, "accuracy": 85, "crit": 10, "cooldown": 4,
-             "debuff": {"stat": "defense", "amount": 5, "duration": 2}}
+            {
+                "key": "Blood Frenzy",
+                "name": "Blood Frenzy",
+                "description": "Double damage attack with recoil. May critically strike.",
+                "multiplier": 2.0,
+                "accuracy": 100,
+                "crit": 25,
+                "cooldown": 4,
+                "recoil": 0.5
+            },
+            {
+                "key": "Infernal Howl",
+                "name": "Infernal Howl",
+                "description": "A terrifying howl that weakens enemy defense.",
+                "multiplier": 1.2,
+                "accuracy": 85,
+                "crit": 10,
+                "cooldown": 3,
+                "debuff": {"stat": "defense", "amount": 5, "duration": 3}
+            }
         ]
-        return self._execute_move(random.choice(abilities), opponent)
+        chosen = self.choose_move(abilities)
+        if chosen:
+            return self._execute_move(chosen, opponent)
+        return None  # player chose to go back

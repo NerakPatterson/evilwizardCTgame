@@ -4,7 +4,7 @@ from heal import heal as universal_heal
 
 class SuccubusRogue(Character):
     def __init__(self, name):
-        super().__init__(name, health=100, attack_power=35)
+        super().__init__(name, health=130, attack_power=35)
         self.healing_cost = 50
         self.evade_next = False
         self.last_move = None
@@ -16,7 +16,7 @@ class SuccubusRogue(Character):
         self.crit_chance = 25
         self.defense = 4
         self.speed = 50
-        self.evasion = 30  # High evasion
+        self.evasion = 30
 
         # Cooldowns
         self.cooldowns = {
@@ -26,17 +26,15 @@ class SuccubusRogue(Character):
             "Lip Lock Laceration": 0,
         }
 
-        # Archer-style interjections
-        self.archer_comments = [
-            "Phrasing!",
-            "Do you even lift, mortal?",
-            "Classic attempt. Pathetic!",
-            "Try harder next time.",
-            "Wow, truly terrifying... not.",
-            "That was weak. Try again."
+        self.comments = [
+            "You want rules? Cute. I chew rules and spit sarcasm.",
+            "I’m not broken. I’m just the part they couldn’t fix without burning the whole thing down.",
+            "I used to care. Then I saw what caring gets you — a leash and a therapist.",
+            "I don’t want your soul. I want to watch you beg for it back.",
+            "I’m not here to kill you. I’m here to make you interesting.",
+            "You’re trembling. Is it fear… or anticipation?"
         ]
 
-        # Move-specific insults
         self.move_insults = {
             "Seductive Slash": [
                 "Ooh, careful! You might cut yourself falling for me.",
@@ -49,12 +47,12 @@ class SuccubusRogue(Character):
                 "That blush suits you… but it won’t save you."
             ],
             "Tempting Taunt": [
-                "I could do this all day, sweetie.",
+                "Every scream is a love letter. Keep writing.",
                 "Oh, you’re trying? Cute!",
-                "Bet you didn’t see that coming… literally."
+                "You’re not dying. You’re just becoming art."
             ],
             "Lip Lock Laceration": [
-                "Mwah! Bet that left a mark, sugar.",
+                "They called me a monster. I called them delicious.",
                 "Oops… did that sting your ego?",
                 "Kisses and cuts, all in a day’s work."
             ]
@@ -73,17 +71,11 @@ class SuccubusRogue(Character):
     def heal(self):
         self.heal_amount = 20
         self.heal_cooldown_duration = 2
-        print(f"{self.name} pouts: 'Fine, a little self-care… don’t get used to it!'")
+        print(f"{self.name} pouts: 'Fine, a little self-care… what's another STD?'")
         success = universal_heal(self)
-        if success:
-            msg = f"{self.name} smirks: 'Feeling naughty and nice now.'"
-            print(msg)
-            self.battle_log.append(msg)
-        else:
-            msg = f"{self.name} frowns: 'Seriously? I expected better.'"
-            print(msg)
-            self.battle_log.append(msg)
-
+        msg = f"{self.name} smirks: 'Feeling naughty and nice now.'" if success else f"{self.name} frowns: 'Seriously? I expected better.'"
+        print(msg)
+        self.battle_log.append(msg)
         self._maybe_comment_or_insult()
         return success
 
@@ -92,9 +84,28 @@ class SuccubusRogue(Character):
             if self.cooldowns[move] > 0:
                 self.cooldowns[move] -= 1
 
+    def choose_move(self, move_list):
+        print("\nChoose your move:")
+        for i, move in enumerate(move_list, 1):
+            key = move["key"]
+            cd = self.cooldowns.get(key, 0)
+            status = f"(Cooldown: {cd})" if cd > 0 else "(Ready)"
+            print(f"{i}. {key} — {move['description']} {status}")
+        print(f"{len(move_list)+1}. Go back")
+
+        while True:
+            choice = input("Enter move number: ").strip()
+            if choice.isdigit():
+                choice = int(choice)
+                if 1 <= choice <= len(move_list):
+                    return move_list[choice - 1]
+                elif choice == len(move_list) + 1:
+                    return None
+            print("Invalid choice. Try again.")
+
     def _maybe_comment_or_insult(self, opponent=None, move_key=None):
         if random.randint(1, 100) <= 25:
-            comment = random.choice(self.archer_comments)
+            comment = random.choice(self.comments)
             print(f"{self.name} mutters: '{comment}'")
             self.battle_log.append(comment)
         if opponent and move_key and move_key in self.move_insults and random.randint(1, 100) <= 50:
@@ -106,22 +117,23 @@ class SuccubusRogue(Character):
         key = chosen["key"]
         self.current_opponent = opponent
 
-        # Repeat/cooldown checks
+        print(f"\n{self.name} prepares to use {key}: {chosen['description']}")
+        self.battle_log.append(f"{self.name} prepares to use {key}: {chosen['description']}")
+
         if self.last_move == key:
-            msg = f"{self.name} giggles: 'Can't spam {key}, silly!'"
+            msg = f"{self.name} giggles: 'Can't spam {key}, cutie!'"
             print(msg)
             self.battle_log.append(msg)
             return False
         if self.cooldowns.get(key, 0) > 0:
-            msg = f"{self.name} rolls her eyes: '{key} cooling down. Chill out.'"
+            msg = f"{self.name} rolls her eyes: '{key} cumming soon. Chill out.'"
             print(msg)
             self.battle_log.append(msg)
             return False
 
-        # Accuracy check
         net_hit_chance = max(chosen["accuracy"] - opponent.evasion, 5)
         if random.randint(1, 100) > net_hit_chance:
-            msg = f"{self.name} lunges at {opponent.name} but misses. 'Oopsie!'"
+            msg = f"{self.name} lunges at {opponent.name} but misses. 'Well dammit!'"
             print(msg)
             self.battle_log.append(msg)
             self._maybe_comment_or_insult(opponent, key)
@@ -129,26 +141,24 @@ class SuccubusRogue(Character):
             self.cooldowns[key] = chosen.get("cooldown", 0)
             return True
 
-        # Damage calculation
-        print(f"\n{self.name} uses {key} — {chosen['description']}")
         base = self.attack_power * chosen["multiplier"]
         base = random.randint(int(base * 0.8), int(base * 1.2))
 
         is_crit = random.randint(1, 100) <= chosen.get("crit", 0)
         if is_crit:
             base *= 2
-            crit_msg = f"{self.name} smirks: 'Critical hit, baby!'"
+            crit_msg = f"{self.name} You think chaos is ugly? Darling, it’s the only thing that ever loved me back.'"
             print(crit_msg)
             self.battle_log.append(crit_msg)
 
         damage = max(int(base) - opponent.defense, 0)
         opponent.health = max(opponent.health - damage, 0)
+
         hit_msg = f"{opponent.name} takes {damage} damage. Now at {opponent.health} HP."
         print(hit_msg)
         self.battle_log.append(f"{self.name} used {key} on {opponent.name} for {damage} damage" + (" (CRIT)" if is_crit else ""))
         self.battle_log.append(hit_msg)
 
-        # Optional debuff
         if "debuff" in chosen:
             debuff = chosen["debuff"]
             if not hasattr(opponent, "active_debuffs"):
@@ -158,13 +168,11 @@ class SuccubusRogue(Character):
             print(debuff_msg)
             self.battle_log.append(debuff_msg)
 
-        # Archer-style interjection and insult
         self._maybe_comment_or_insult(opponent, key)
 
         self.last_move = key
         self.cooldowns[key] = chosen.get("cooldown", 0)
 
-        # End of battle check
         if opponent.health <= 0:
             msg = f"{opponent.name} has been defeated!"
             print(msg)
@@ -178,27 +186,53 @@ class SuccubusRogue(Character):
 
         return True
 
-    # Normal attacks
     def attack(self, opponent):
         attacks = [
-            {"key": "Seductive Slash", "name": "Seductive Slash", 
+            {"key": "Seductive Slash", 
+             "name": "Seductive Slash", 
              "description": "A flirtatious slash that leaves more than a mark.", 
-             "multiplier": 0.9, "accuracy": 95, "crit": 15, "cooldown": 1},
-            {"key": "Charm Strike", "name": "Charm Strike", 
-             "description": "A dazzling attack that distracts and wounds.", 
-             "multiplier": 0.8, "accuracy": 90, "crit": 20, "cooldown": 0}
+             "multiplier": 0.9, 
+             "accuracy": 95, 
+             "crit": 15, 
+             "cooldown": 2},
+            
+            {"key": "Charm Strike", 
+             "name": "Charm Strike", 
+             "description": 
+                 "A dazzling attack that distracts and wounds.", 
+             "multiplier": 0.8, 
+             "accuracy": 90, 
+             "crit": 20, 
+             "cooldown": 2}
         ]
-        return self._execute_move(random.choice(attacks), opponent)
+        chosen = self.choose_move(attacks)
+        if chosen:
+            return self._execute_move(chosen, opponent)
+        return None
 
-    # Special abilities
     def special_ability(self, opponent):
         abilities = [
-            {"key": "Tempting Taunt", "name": "Tempting Taunt", 
-             "description": "A sultry taunt that weakens enemy resolve.", 
-             "multiplier": 1.0, "accuracy": 85, "crit": 10, "cooldown": 2,
-             "debuff": {"stat": "attack_power", "amount": 5, "duration": 2}},
-            {"key": "Lip Lock Laceration", "name": "Lip Lock Laceration", 
-             "description": "A kiss with a deadly twist, can critically strike.", 
-             "multiplier": 1.5, "accuracy": 80, "crit": 30, "cooldown": 3}
+            {
+                "key": "Tempting Taunt",
+                "name": "Tempting Taunt",
+                "description": "A sultry taunt that weakens enemy resolve.",
+                "multiplier": 1.0,
+                "accuracy": 85,
+                "crit": 10,
+                "cooldown": 4,
+                "debuff": {"stat": "attack_power", "amount": 5, "duration": 2}
+            },
+            {
+                "key": "Lip Lock Laceration",
+                "name": "Lip Lock Laceration",
+                "description": "A kiss with a deadly twist, can critically strike.",
+                "multiplier": 1.5,
+                "accuracy": 80,
+                "crit": 30,
+                "cooldown": 3,
+            }
         ]
-        return self._execute_move(random.choice(abilities), opponent)
+        chosen = self.choose_move(abilities)
+        if chosen:
+            return self._execute_move(chosen, opponent)
+        return None  
